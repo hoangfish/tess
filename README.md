@@ -282,6 +282,159 @@ Every entry records the **prompt**, the **AI’s response**, and our **analysis/
 
 ---
 
+
+### A6 — Dash Physics Bug (Extended, with code)
+**Prompt (User):**  
+“Player dash sometimes tunnels through walls. Code snippet (simplified):  
+```csharp
+rb.AddForce(dashDirection * dashSpeed, ForceMode2D.Impulse);
+```
+This is inside `Update()`. Sometimes player goes through colliders. Why?”
+
+**AI Output (Gemini):**  
+- Use `CollisionDetectionMode2D.Continuous`.  
+- Apply force in `FixedUpdate` not `Update`.  
+- Optionally switch to a temporary "Ghost" collision layer to avoid enemy stacking.  
+
+**Decision (Team):** *Adopt.*  
+**Reason:** Clear explanation of physics update mismatch. Continuous detection solved wall tunneling.  
+**Commit/Scene:** `Player/Dash.cs`, Physics2D settings.  
+**Risk/Tests:** Dashing against angled walls verified.
+
+---
+
+### A7 — Enemy FSM Design (Extended, with code)
+**Prompt (User):**  
+“We want enemies with Idle, Chase, Attack, Hurt, Dead. Should we use interface-based FSM or enum? Example draft:  
+```csharp
+switch(state) {
+   case EnemyState.Idle: ...
+   case EnemyState.Chase: ...
+}
+```
+Is this good enough?”
+
+**AI Output (ChatGPT):**  
+- Interfaces: more extensible, each state a class.  
+- Enum+switch: simpler for few states.  
+- Suggest extracting shared damage logic into `EnemyBase`.  
+
+**Decision (Team):** *Modify.* Chose enum+switch for now.  
+**Reason:** Faster iteration for slime enemies.  
+**Commit/Scene:** `Enemies/Slime.cs`, `Enemies/BaseEnemy.cs`.  
+**Risk/Tests:** Will refactor to State pattern if complexity increases.
+
+---
+
+### A9 — Sword Hit Detection Bug (Extended, with code)
+**Prompt (User):**  
+“OnTriggerEnter2D sometimes misses diagonal sword hits. Example:  
+```csharp
+void OnTriggerEnter2D(Collider2D col) {
+   if(col.CompareTag("Enemy")) col.GetComponent<Enemy>().TakeDamage(10);
+}
+```
+How to make it reliable?”
+
+**AI Output (ChatGPT):**  
+- Colliders may desync at fast motion.  
+- Suggest `Physics2D.OverlapBoxAll` at animation frames for deterministic checks.  
+
+**Decision (Team):** *Adopt.*  
+**Reason:** OverlapBoxAll eliminated diagonal misses.  
+**Commit/Scene:** `Combat/HitDetection.cs`.  
+**Risk/Tests:** Performance fine, enemies hit consistently.
+
+---
+
+### A11 — Projectile Pooling (Extended, with code)
+**Prompt (User):**  
+“Arrows instantiated like this cause GC spikes:  
+```csharp
+Instantiate(arrowPrefab, pos, rot);
+```
+How do we pool projectiles? Should Bow and Staff share a pool?”
+
+**AI Output (Gemini):**  
+- Implement object pool. Pre-instantiate.  
+- Each projectile disables after lifetime.  
+- Can use shared pool or separate depending on data differences.  
+
+**Decision (Team):** *Modify.* Pool for Bow only at first.  
+**Reason:** Simple to test before generalizing.  
+**Commit/Scene:** `Pooling/ProjectilePool.cs`.  
+**Risk/Tests:** GC reduced, FPS stable.
+
+---
+
+### A16 — Design Pattern Focus: Factory
+**Prompt (User):**  
+“We want to decouple weapon creation. Show Factory Pattern in Unity for Sword, Bow, Staff. Must integrate with IWeapon interface.”
+
+**AI Output (ChatGPT):**  
+```csharp
+public class WeaponFactory {
+   public static IWeapon CreateWeapon(WeaponType type) {
+      switch(type) {
+        case WeaponType.Sword: return new Sword();
+        case WeaponType.Bow: return new Bow();
+        case WeaponType.Staff: return new Staff();
+        default: throw new ArgumentException();
+      }
+   }
+}
+```
+
+**Decision (Team):** *Adopt.*  
+**Reason:** Clean central place for instantiation, avoids scattering `new`.  
+**Commit/Scene:** `Weapons/WeaponFactory.cs`.  
+**Risk/Tests:** Future: extendable to ScriptableObjects.
+
+---
+
+### A17 — Design Pattern Focus: Observer
+**Prompt (User):**  
+“UI health bar sometimes desyncs. How do we apply Observer Pattern? Example:  
+```csharp
+public class Player : MonoBehaviour {
+   public int health = 100;
+}
+```
+Currently UI polls health each frame.”
+
+**AI Output (ChatGPT):**  
+- Raise event `OnHealthChanged`.  
+- UI subscribes to event, updates only on change.  
+
+**Decision (Team):** *Adopt.*  
+**Reason:** Decoupled, efficient UI updates.  
+**Commit/Scene:** `Player/Damageable.cs`, `UI/HealthBar.cs`.  
+**Risk/Tests:** Verified with damage and healing.
+
+---
+
+### A18 — Design Pattern Focus: Singleton
+**Prompt (User):**  
+“We want a global GameManager. What’s safe Singleton pattern in Unity? Avoid multiple instances.”
+
+**AI Output (ChatGPT):**  
+```csharp
+public class GameManager : MonoBehaviour {
+   public static GameManager Instance { get; private set; }
+   void Awake() {
+      if(Instance != null && Instance != this) Destroy(gameObject);
+      else { Instance = this; DontDestroyOnLoad(gameObject); }
+   }
+}
+```
+
+**Decision (Team):** *Adopt.*  
+**Reason:** Ensures one persistent manager across scenes.  
+**Commit/Scene:** `Systems/GameManager.cs`.  
+**Risk/Tests:** Confirmed only one instance survives.
+
+---
+
 ## OOP & Patterns
 - **Encapsulation**: `Damageable` hides health logic.  
 - **Inheritance**: `EnemyBase` → `Slime`, `Ghost`.  
@@ -299,7 +452,8 @@ The extended dialogues show real back-and-forth reasoning, proving AI was used r
 
 
 ## Additional Features from Tutorial Video
-This section documents additional gameplay and technical features that were inspired by the tutorial video, integrated and tested in the same AI collaboration style as above.
+This section documents additional gameplay and technical features that were inspired by the [tutorial video](https://www.youtube.com/watch?v=VIDEO_ID), integrated and tested in the same AI collaboration style as above.
+
 
 ## Intro
 - **Prompt:** Asked AI for guidance on implementing *Intro* in Unity.
