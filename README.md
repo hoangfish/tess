@@ -1,606 +1,134 @@
-# AI Collaboration Log (AI_LOG.md)
+# 2DGame
 
-This log documents the complete journey of developing the **2D RPG Game** (hack-and-slash, top-down) with the help of AI tools (ChatGPT, GitHub Copilot, Google Gemini).  
-Every entry records the **prompt**, the **AI’s response**, and our **analysis/decision** (Adopt/Modify/Reject). This is a critical deliverable, required for grading.
-
----
-
-## Principles of AI Use
-- **AI tools were partners**, not replacements. Final decisions were made by the team.
-- **Traceability**: Every prompt and output is logged with commit/scene references.
-- **Prompt engineering**: Reusable patterns were applied (e.g., Spec & Constraints, Checklist First, Refactor Plan).
-- **Roles**:  
-  - **ChatGPT** = *Architect & Reviewer* (design, architecture, debugging explanations).  
-  - **Copilot** = *Coder* (inline boilerplate, repetitive code).  
-  - **Gemini** = *Debugger/QA* (physics sanity, profiling hints, optimization).
+This is a 2D top-down RPG game developed using Unity and C#. The project is structured for development, compilation, and execution on the **Windows** platform. Below are detailed instructions for compiling and running the game, including all necessary prerequisites.
 
 ---
 
-## Detailed Interaction Log
-
-### A1 — Idea Brainstorming & Core Mechanics (2025-07-28)
-**Prompt:**  
-“Suggest mechanics for a small top-down 2D RPG where the player fights monsters. Keep it simple but fun. We want sword, bow, staff, pickups, portals, and destructible environment.”
-
-**AI Output (ChatGPT):**  
-- Core mechanics: melee attack, ranged projectiles, dash, knockback.  
-- Props: destructible grass/rocks.  
-- Progression: pickups (gems, health).  
-- Extra: fade portals, 2D lights, camera shake.  
-
-**Decision:** *Adopt.* These became our baseline mechanics.  
-**Commit/Scene:** Initial project setup commit.  
-**Risk/Tests:** None yet — concept stage.
+## Project Structure
+The project directory (`2DGame`) contains the following key components:
+- `Assets/`: Contains game assets (sprites, scripts, scenes, etc.).
+- `Packages/`: Unity package dependencies.
+- `ProjectSettings/`: Unity configuration files.
+- `2DGame.sln` and `Assembly-CSharp.csproj`: Solution and project files for C# development.
+- `.gitignore` and `.gitattributes`: Git configuration files for version control.
+- `Library/`, `Logs/`, `Temp/`, `obj/`: Temporary and cache folders (excluded from version control).
 
 ---
 
-### A2 — Project Architecture & Class Split (2025-07-29)
-**Prompt:**  
-“You are a senior Unity dev. Design OOP structure for Player, Enemy, Weapon, Pickup, SceneTransition. Use Unity MonoBehaviours, but separate data from behavior where possible.”
+## Prerequisites
 
-**AI Output (ChatGPT):**  
-- Classes: `PlayerController`, `EnemyBase`, `IWeapon` (Sword/Bow/Staff).  
-- `Pickup` and `PickupSpawner`.  
-- `SceneTransition` for fade portals.  
-- Suggested ScriptableObjects for weapon data.  
-- Design patterns: Factory for weapons, Observer for UI, Singleton for GameManager.  
-
-**Decision:** *Adopt (with tweaks).* We added our own Management folder for organization.  
-**Commit/Scene:** `Scripts/Player/`, `Scripts/Enemies/`, `Scripts/Misc/`.  
-**Risk/Tests:** Danger of overengineering. Mitigated by keeping FSM simple.
-
----
-
-### A3 — UML Diagram Generation (2025-07-29)
-**Prompt:**  
-“Generate UML diagram for Player, Enemy, Weapon, Pickup, SceneTransition.”
-
-**AI Output (ChatGPT):** UML sketch with inheritance arrows, composition relations.  
-
-**Decision:** *Adopt.* Team refined it to match Unity folder structure.  
-**Commit/Scene:** Documentation only.  
-**Risk/Tests:** No risk.
+### General Requirements
+- **Unity**: Version 2022.3 or later (LTS recommended for stability). Download from [Unity Hub](https://unity.com/download).
+- **Unity Hub**: Central tool for managing Unity projects and editor versions. Download from [Unity Hub](https://unity.com/releases/hub).
+- **IDE**: 
+  - **Visual Studio Community** (recommended for C# debugging on Windows). Download from [Visual Studio](https://visualstudio.microsoft.com/vs/community/).
+  - **Visual Studio Code** (alternative, with C# extension). Download from [VS Code](https://code.visualstudio.com/) and install the C# extension by Microsoft.
+- **Git**: For cloning the repository (optional). Download from [Git](https://git-scm.com/downloads).
+- **Disk Space**: At least 5GB free for Unity, project files, and build outputs.
+- **Operating System**: Windows 10 or later (64-bit).
+- **Graphics Drivers**: Ensure GPU drivers are up to date (e.g., NVIDIA, AMD, or Intel) for smooth rendering.
+- **DirectX**: Typically pre-installed on Windows 10/11, but ensure DirectX 11 or later is available for Unity’s rendering pipeline.
 
 ---
 
-### A4 — Input System Setup (2025-07-30)
-**Prompt:**  
-“Design input using Unity’s new Input System. Actions: Move(Vector2), Attack(Button), Dash(Button), SwitchWeapon(Button). Map WASD/Arrow keys + controller. Show PlayerController.cs usage.”
+## How to Compile
 
-**AI Output (ChatGPT):**  
-- InputActions asset sample.  
-- Wrapper class wiring callbacks.  
-- Suggested normalized movement vector + Animator params.  
+### Step 1: Set Up the Project
+1. **Clone or Download the Repository**:
+   - Using Git (if version control is set up):
+   git clone https://github.com/hoangfish/2DGame
+- Alternatively, download the `2DGame` folder as a ZIP file and extract it to a desired location.
+2. **Install Unity Hub**:
+- Download and install Unity Hub from [Unity](https://unity.com/releases/hub).
+- Open Unity Hub and sign in with a Unity account (free tier is sufficient for personal use).
+3. **Install Unity Editor**:
+- In Unity Hub, go to **Installs** > **Install Editor**.
+- Select Unity 2022.3 (LTS) or a later version.
+- Ensure the **Windows Build Support (IL2CPP)** module is included during installation to enable Windows builds.
+- Install the editor to your system (default path is fine).
+4. **Open the Project in Unity**:
+- In Unity Hub, click **Add** in the **Projects** tab.
+- Navigate to the `2DGame` folder and select it.
+- Click the project name in Unity Hub to open it in the Unity Editor.
+5. **Verify Project Integrity**:
+- If assets or references are missing, go to **Assets > Reimport All** in the Unity Editor.
+- Check the **Console** window for any C# script compilation errors. Open problematic scripts in Visual Studio or VS Code to resolve.
 
-**Decision:** *Adopt with rename.* Changed `Attack` → `PrimaryAttack`.  
-**Commit/Scene:** `Player/Controller.cs`, `Input/InputActions.inputactions`.  
-**Risk/Tests:** Possible memory leak if callbacks not disposed. Checked in profiler.
-
----
-
-### A5 — Player Animation BlendTree (2025-08-01)
-**Prompt:**  
-“Set up 8-direction sprite animation using BlendTree. Use moveX, moveY, speed. Idle should face last moved direction.”
-
-**AI Output:** Explained Freeform Directional 2D blend. Showed caching last vector.  
-
-**Decision:** *Adopt.* Smooth idle facing implemented.  
-**Commit/Scene:** `Animator.controller` for Player.  
-**Risk/Tests:** Verified idle doesn’t jitter.
-
----
-
-### A6 — Dash Physics Bug (2025-08-02)
-**Prompt:**  
-“Player dash sometimes tunnels through walls. How to fix?”
-
-**AI Output (Gemini):**  
-- Use `CollisionDetectionMode2D.Continuous`.  
-- Apply force in `FixedUpdate`.  
-- Temporarily change layer during dash to avoid unwanted collisions.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** `Player/Dash.cs`, Physics2D project settings.  
-**Risk/Tests:** Checked dash into walls, enemies.
-
----
-
-### A7 — Enemy FSM Design (2025-08-03)
-**Prompt:**  
-“Design FSM for Enemy: Idle, Chase, Attack, Hurt, Dead. Suggest IEnemyState interface with transitions.”
-
-**AI Output:** Interface-based FSM with state classes. Telegraph before Attack.  
-
-**Decision:** *Modify.* Used enum+switch (simpler) but extracted shared logic (`TakeDamage`, `Knockback`) into `EnemyBase`.  
-**Commit/Scene:** `Enemies/Slime.cs`, `Enemies/BaseEnemy.cs`.  
-**Risk/Tests:** Works but harder to scale. Will refactor later.
+### Step 2: Compile for Windows
+1. **Configure Build Settings**:
+- In the Unity Editor, go to **File > Build Settings**.
+- Select **PC, Mac & Linux Standalone** as the platform.
+- Ensure **Target Platform** is set to **Windows**.
+- Set **Architecture** to **x86_64** (64-bit, standard for modern Windows systems).
+- Optionally, adjust **Compression Method** (e.g., Default or LZ4HC for faster builds).
+2. **Build the Project**:
+- In the Build Settings window, click **Build**.
+- Choose an output directory (e.g., `Builds/Windows/` in the project folder).
+- Unity will compile the project, generating:
+- An executable file (e.g., `2DGame.exe`).
+- A data folder (e.g., `2DGame_Data`) containing game assets and resources.
+- The compilation process may take a few minutes, depending on system performance and project size.
+3. **Handle Compilation Errors**:
+- If the build fails, check the **Console** for errors (e.g., missing assets, script errors).
+- Reimport assets via **Assets > Reimport All** if textures or prefabs are missing.
+- Ensure all scripts in `Assets/Scripts/` compile without errors by reviewing them in your IDE.
+- If errors persist, verify that the **Windows Build Support** module is installed in Unity Hub.
 
 ---
 
-### A8 — Sword Attack Animation Events (2025-08-04)
-**Prompt:**  
-“Implement sword swing using Animation Events: enable collider on attack frames, disable after. Provide IWeapon.Attack().”
+## How to Run
 
-**AI Output:** Code to toggle `BoxCollider2D`. Clear target cache per swing.  
+### Running in Unity Editor
+1. **Load a Scene**:
+- In the Unity Editor, open the **Hierarchy** window.
+- Ensure a valid game scene is loaded (e.g., `Assets/Scenes/SampleScene.unity`). Double-click the scene file in the **Project** window to load it.
+2. **Play the Game**:
+- After setting up the project (and ensuring compilation in the editor is successful), click the **Play** button (triangle icon) at the top of the Unity Editor.
+- The game will run in the **Game** view, allowing you to test gameplay (e.g., use WASD for movement, mouse for aiming, or other controls defined in `Assets/Scripts/PlayerController.cs`).
+- Use the **Scene** view to debug or inspect game objects during play.
+3. **Stop Playing**:
+- Click the **Play** button again to stop the game and return to editing mode.
+- Check the **Console** for any runtime errors or warnings during playtesting.
 
-**Decision:** *Adopt.*  
-**Commit/Scene:** `Weapons/Sword.cs`, Sword.anim events.  
-**Risk/Tests:** Each enemy hit once per swing.
+### Running the Built Executable
+1. **Locate the Build Output**:
+- Navigate to the output directory specified during the build (e.g., `Builds/Windows/`).
+- Ensure the executable (`2DGame.exe`) and the accompanying `2DGame_Data` folder are present in the same directory.
+2. **Launch the Game**:
+-
 
----
-
-### A9 — Sword Hit Detection Bug (2025-08-04)
-**Prompt:**  
-“OnTriggerEnter2D sometimes misses when sword hits diagonally. Diagnose and propose fix.”
-
-**AI Output (ChatGPT):**  
-- Possible causes: collider type mismatch, Z-depth, wrong `isTrigger`.  
-- Suggested deterministic `Physics2D.OverlapBoxAll` check per frame.  
-
-**Decision:** *Adopt.* Changed to overlap-based hit detection.  
-**Commit/Scene:** `Combat/HitDetection.cs`.  
-**Risk/Tests:** Verified consistent across 8 directions.
-
----
-
-### A10 — Knockback + i-Frames (2025-08-05)
-**Prompt:**  
-“Add knockback and invulnerability frames after damage. Flash sprite using SpriteFade.cs. Show coroutine.”
-
-**AI Output:** Coroutine applying knockback, layer switch to Invincible, flashing effect.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** `Shared/Damageable.cs`, `VFX/SpriteFade.cs`.  
-**Risk/Tests:** No stuck colliders, no material leaks.
+Double-click `2DGame.exe` to run the game on Windows.
+- The game will launch in a standalone window or fullscreen, depending on settings configured in **Edit > Project Settings > Player**.
+3. **System Requirements**:
+- **OS**: Windows 10 or later (64-bit).
+- **RAM**: Minimum 4GB (8GB recommended for smooth performance).
+- **GPU**: DirectX 11-compatible graphics card (e.g., NVIDIA GTX 960 or equivalent).
+- **Storage**: Approximately 1GB for the built game, depending on assets.
 
 ---
 
-### A11 — Ranged Weapons & Projectiles (2025-08-06)
-**Prompt:**  
-“Design Bow and Staff projectiles. Include projectile speed, lifetime, penetration flag. Suggest pooling solution.”
-
-**AI Output (Gemini):** Object pool for projectiles. ScriptableObject data for each weapon.  
-
-**Decision:** *Modify.* Implemented pooling for arrows first; staff later.  
-**Commit/Scene:** `Pooling/ProjectilePool.cs`.  
-**Risk/Tests:** Profiler test shows reduced GC.
-
----
-
-### A12 — Pickups & Spawner (2025-08-07)
-**Prompt:**  
-“Implement Pickup.cs for gems, health, arrows. Add PickupSpawner with radius, random seed, avoid overlap.”
-
-**AI Output (Copilot + ChatGPT):** Provided Pickup script, overlap check, seeded RNG.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** `Misc/Pickup.cs`, `Misc/PickUpSpawner.cs`.  
-**Risk/Tests:** Deterministic spawn verified.
+## Troubleshooting
+- **Unity Editor Issues**:
+- **Missing Assets**: If textures, scripts, or prefabs are missing, go to **Assets > Reimport All**.
+- **Script Compilation Errors**: Open the **Console** window to view errors. Edit problematic scripts in Visual Studio or VS Code (check `Assets/Scripts/`).
+- **Packages Missing**: Open **Window > Package Manager** and verify all dependencies listed in `Packages/manifest.json` are installed.
+- **Build Issues**:
+- **Executable Fails to Run**: Ensure the `2DGame_Data` folder is in the same directory as `2DGame.exe`.
+- **Graphics Issues**: Update GPU drivers (e.g., via NVIDIA GeForce Experience or AMD Radeon Software).
+- **Build Fails**: Check that **Windows Build Support (IL2CPP)** is installed in Unity Hub. Reinstall if necessary.
+- **Performance Issues**:
+- Enable **V-Sync** in **Edit > Project Settings > Quality** to prevent screen tearing.
+- Reduce graphical settings (e.g., lower resolution or disable effects) in **Edit > Project Settings > Player** for low-end systems.
+- Use the **Profiler** (Window > Analysis > Profiler) to identify performance bottlenecks during playtesting.
+- **Gameplay Issues**:
+- If controls don’t work, verify input mappings in `Assets/Input/InputActions.inputactions` or scripts like `PlayerController.cs`.
+- Test gameplay in the Unity Editor first to debug issues before building.
 
 ---
 
-### A13 — Scene Transition & Portal (2025-08-08)
-**Prompt:**  
-“Implement fade transition: fade out, disable input, async load new scene, fade in. Keep Indestructible objects across scenes.”
-
-**AI Output:** Coroutine for fade, `DontDestroyOnLoad` handling.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** `Systems/SceneTransition.cs`, `Indestructible.cs`.  
-**Risk/Tests:** Input locked properly during transition.
-
----
-
-### A14 — UI (2025-08-09)
-**Prompt:**  
-“Set up UI: health bar, cooldown indicator, inventory toggle, pause with timescale.”
-
-**AI Output:** Observer-style event system. Suggested `OnCooldownChanged` event for UI updates.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** `UI/HealthBar.cs`, `UI/CooldownUI.cs`.  
-**Risk/Tests:** UI syncs correctly.
-
----
-
-### A15 — Performance Pass (2025-08-10)
-**Prompt:**  
-“Profile shows spikes in Update. Suggest optimizations for Unity 2D.”
-
-**AI Output (Gemini):**  
-- Avoid LINQ in Update.  
-- Cache components.  
-- Use CompositeColliders for tilemaps.  
-- Enable incremental GC.  
-
-**Decision:** *Adopt.*  
-**Commit/Scene:** Profiling notes + optimized scripts.  
-**Risk/Tests:** FPS stable at 60.
-
----
-
-## Extended Conversations (Natural Dialogues)
-
-### A6 — Dash Physics Bug
-- *User*: “Player sometimes goes through walls when dashing. We’re applying force with Rigidbody2D in Update.”  
-- *AI (Gemini)*: “That explains it. Physics should be handled in FixedUpdate, not Update. Otherwise, physics frames desync with rendering.”  
-- *User*: “Okay, so move all AddForce calls into FixedUpdate?”  
-- *AI*: “Yes, and also set Rigidbody2D.collisionDetectionMode to Continuous. By default, it’s Discrete, which can miss collisions on fast movement.”  
-- *User*: “We also noticed dash occasionally pushes the player inside enemies.”  
-- *AI*: “You can temporarily switch the player to a Ghost collision layer during the dash. That prevents stacking or jitter. Restore the normal layer after the dash ends.”  
-- *User*: “Got it. Continuous mode + FixedUpdate + temporary layer change.”  
-- *AI*: “Exactly. And test by dashing repeatedly against tilemap walls at different angles.”  
-
----
-
-### A7 — Enemy FSM Design
-- *User*: “We want enemies with Idle, Chase, Attack, Hurt, Dead. Should we use interface-based FSM or enum?”  
-- *AI (ChatGPT)*: “Interfaces give you extensibility — each state is its own class implementing IEnemyState. Cleaner separation of logic.”  
-- *User*: “That sounds heavy for small enemies like slimes.”  
-- *AI*: “True, if you only have 4–5 states, enum + switch might be faster to implement. You can refactor later if more complexity is added.”  
-- *User*: “What about damage handling and knockback? Should each state handle that?”  
-- *AI*: “Better: put TakeDamage and Knockback in a shared EnemyBase class. Then states only control behavior flow (Idle → Chase → Attack).”  
-- *User*: “So we’ll start with enum + switch, but still design EnemyBase with reusable damage logic.”  
-- *AI*: “Perfect compromise. Later, if you add bosses with special states, you can refactor to full State pattern.”  
-
----
-
-### A9 — Sword Hit Detection Bug
-- *User*: “OnTriggerEnter2D sometimes misses when sword hits diagonally. Why?”  
-- *AI (ChatGPT)*: “Likely causes: wrong Rigidbody2D type, colliders slightly misaligned, or triggers missing fast movements. It’s a known Unity quirk.”  
-- *User*: “So what’s a robust fix?”  
-- *AI*: “Instead of relying on passive triggers, perform an active overlap check at the exact animation frames of the swing. Use Physics2D.OverlapBoxAll, aligned with the sword’s arc.”  
-- *User*: “That means computing a hitbox every frame?”  
-- *AI*: “Not every frame, only on specific attack frames via Animation Events. OverlapBoxAll returns a list of colliders; you can filter by layer and apply damage once.”  
-- *User*: “How about performance?”  
-- *AI*: “It’s negligible for a 2D action RPG. Just make sure to cache arrays or reuse lists to avoid allocations.”  
-- *User*: “Great, we’ll implement overlap checks tied to animation events.”  
-- *AI*: “Also remember to clear your hit cache each swing, so enemies don’t take multiple hits per arc.”  
-
----
-
-### A10 — Knockback & Invincibility Frames
-- *User*: “We want knockback when enemies hit the player, plus short invulnerability with sprite flashing.”  
-- *AI (ChatGPT)*: “Use a coroutine: apply a force vector away from impact, disable collisions by switching to an Invincible layer, and flash the sprite using material alpha.”  
-- *User*: “How do we implement the flashing safely? We heard Unity can leak materials.”  
-- *AI*: “Correct. Don’t modify sharedMaterial. Instead, clone a material instance once and reuse it. Or better: control color via SpriteRenderer directly if possible.”  
-- *User*: “So coroutine structure is: knockback force → wait duration → restore layer → stop flashing?”  
-- *AI*: “Exactly. You can reuse this coroutine for both player and enemies by putting it in a shared Damageable.cs.”  
-- *User*: “Perfect. We’ll centralize this logic.”  
-
----
-
-### A11 — Projectiles & Pooling
-- *User*: “We want Bow arrows and Staff magic projectiles. Problem: too many Instantiate/Destroy calls.”  
-- *AI (Gemini)*: “Yes, that’s expensive. Use object pooling. Pre-instantiate N projectiles, reuse them.”  
-- *User*: “How do we handle projectile lifetime?”  
-- *AI*: “Each projectile can have an OnEnable coroutine: after X seconds, disable itself. Pool handles reactivation.”  
-- *User*: “Should both Bow and Staff share one pool?”  
-- *AI*: “You can either use a generic ObjectPool<Projectile>, or separate pools if they have very different properties (e.g., penetration, size).”  
-- *User*: “Let’s start with Arrow pooling only. Staff later.”  
-- *AI*: “That’s a good incremental approach.”  
-
----
-
-
-### A6 — Dash Physics Bug (Extended, with code)
-**Prompt (User):**  
-“Player dash sometimes tunnels through walls. Code snippet (simplified):  
-```csharp
-rb.AddForce(dashDirection * dashSpeed, ForceMode2D.Impulse);
-```
-This is inside `Update()`. Sometimes player goes through colliders. Why?”
-
-**AI Output (Gemini):**  
-- Use `CollisionDetectionMode2D.Continuous`.  
-- Apply force in `FixedUpdate` not `Update`.  
-- Optionally switch to a temporary "Ghost" collision layer to avoid enemy stacking.  
-
-**Decision (Team):** *Adopt.*  
-**Reason:** Clear explanation of physics update mismatch. Continuous detection solved wall tunneling.  
-**Commit/Scene:** `Player/Dash.cs`, Physics2D settings.  
-**Risk/Tests:** Dashing against angled walls verified.
-
----
-
-### A7 — Enemy FSM Design (Extended, with code)
-**Prompt (User):**  
-“We want enemies with Idle, Chase, Attack, Hurt, Dead. Should we use interface-based FSM or enum? Example draft:  
-```csharp
-switch(state) {
-   case EnemyState.Idle: ...
-   case EnemyState.Chase: ...
-}
-```
-Is this good enough?”
-
-**AI Output (ChatGPT):**  
-- Interfaces: more extensible, each state a class.  
-- Enum+switch: simpler for few states.  
-- Suggest extracting shared damage logic into `EnemyBase`.  
-
-**Decision (Team):** *Modify.* Chose enum+switch for now.  
-**Reason:** Faster iteration for slime enemies.  
-**Commit/Scene:** `Enemies/Slime.cs`, `Enemies/BaseEnemy.cs`.  
-**Risk/Tests:** Will refactor to State pattern if complexity increases.
-
----
-
-### A9 — Sword Hit Detection Bug (Extended, with code)
-**Prompt (User):**  
-“OnTriggerEnter2D sometimes misses diagonal sword hits. Example:  
-```csharp
-void OnTriggerEnter2D(Collider2D col) {
-   if(col.CompareTag("Enemy")) col.GetComponent<Enemy>().TakeDamage(10);
-}
-```
-How to make it reliable?”
-
-**AI Output (ChatGPT):**  
-- Colliders may desync at fast motion.  
-- Suggest `Physics2D.OverlapBoxAll` at animation frames for deterministic checks.  
-
-**Decision (Team):** *Adopt.*  
-**Reason:** OverlapBoxAll eliminated diagonal misses.  
-**Commit/Scene:** `Combat/HitDetection.cs`.  
-**Risk/Tests:** Performance fine, enemies hit consistently.
-
----
-
-### A11 — Projectile Pooling (Extended, with code)
-**Prompt (User):**  
-“Arrows instantiated like this cause GC spikes:  
-```csharp
-Instantiate(arrowPrefab, pos, rot);
-```
-How do we pool projectiles? Should Bow and Staff share a pool?”
-
-**AI Output (Gemini):**  
-- Implement object pool. Pre-instantiate.  
-- Each projectile disables after lifetime.  
-- Can use shared pool or separate depending on data differences.  
-
-**Decision (Team):** *Modify.* Pool for Bow only at first.  
-**Reason:** Simple to test before generalizing.  
-**Commit/Scene:** `Pooling/ProjectilePool.cs`.  
-**Risk/Tests:** GC reduced, FPS stable.
-
----
-
-### A16 — Design Pattern Focus: Factory
-**Prompt (User):**  
-“We want to decouple weapon creation. Show Factory Pattern in Unity for Sword, Bow, Staff. Must integrate with IWeapon interface.”
-
-**AI Output (ChatGPT):**  
-```csharp
-public class WeaponFactory {
-   public static IWeapon CreateWeapon(WeaponType type) {
-      switch(type) {
-        case WeaponType.Sword: return new Sword();
-        case WeaponType.Bow: return new Bow();
-        case WeaponType.Staff: return new Staff();
-        default: throw new ArgumentException();
-      }
-   }
-}
-```
-
-**Decision (Team):** *Adopt.*  
-**Reason:** Clean central place for instantiation, avoids scattering `new`.  
-**Commit/Scene:** `Weapons/WeaponFactory.cs`.  
-**Risk/Tests:** Future: extendable to ScriptableObjects.
-
----
-
-### A17 — Design Pattern Focus: Observer
-**Prompt (User):**  
-“UI health bar sometimes desyncs. How do we apply Observer Pattern? Example:  
-```csharp
-public class Player : MonoBehaviour {
-   public int health = 100;
-}
-```
-Currently UI polls health each frame.”
-
-**AI Output (ChatGPT):**  
-- Raise event `OnHealthChanged`.  
-- UI subscribes to event, updates only on change.  
-
-**Decision (Team):** *Adopt.*  
-**Reason:** Decoupled, efficient UI updates.  
-**Commit/Scene:** `Player/Damageable.cs`, `UI/HealthBar.cs`.  
-**Risk/Tests:** Verified with damage and healing.
-
----
-
-### A18 — Design Pattern Focus: Singleton
-**Prompt (User):**  
-“We want a global GameManager. What’s safe Singleton pattern in Unity? Avoid multiple instances.”
-
-**AI Output (ChatGPT):**  
-```csharp
-public class GameManager : MonoBehaviour {
-   public static GameManager Instance { get; private set; }
-   void Awake() {
-      if(Instance != null && Instance != this) Destroy(gameObject);
-      else { Instance = this; DontDestroyOnLoad(gameObject); }
-   }
-}
-```
-
-**Decision (Team):** *Adopt.*  
-**Reason:** Ensures one persistent manager across scenes.  
-**Commit/Scene:** `Systems/GameManager.cs`.  
-**Risk/Tests:** Confirmed only one instance survives.
-
----
-
-## OOP & Patterns
-- **Encapsulation**: `Damageable` hides health logic.  
-- **Inheritance**: `EnemyBase` → `Slime`, `Ghost`.  
-- **Polymorphism**: `IWeapon.Attack()` implemented by Sword/Bow/Staff.  
-- **Factory Pattern**: WeaponFactory instantiates weapons.  
-- **Observer Pattern**: UI listens to Player events.  
-- **Singleton**: GameManager for global state.
-
----
-
-## Conclusion
-The collaboration with AI tools accelerated both **prototyping** and **debugging**, while providing architectural guidance.  
-Every suggestion was carefully evaluated — either adopted, modified, or rejected.  
-The extended dialogues show real back-and-forth reasoning, proving AI was used responsibly and critically.
-
-
-## Additional Features from Tutorial Video
-This section documents additional gameplay and technical features that were inspired by the [tutorial video](https://www.youtube.com/watch?v=VIDEO_ID), integrated and tested in the same AI collaboration style as above.
-
-
-## Intro
-- **Prompt:** Asked AI for guidance on implementing *Intro* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Player Input System
-- **Prompt:** Asked AI for guidance on implementing *Player Input System* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Animating The Player
-- **Prompt:** Asked AI for guidance on implementing *Animating The Player* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Player Physics
-- **Prompt:** Asked AI for guidance on implementing *Player Physics* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Enemy State
-- **Prompt:** Asked AI for guidance on implementing *Enemy State* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Sword Animation
-- **Prompt:** Asked AI for guidance on implementing *Sword Animation* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Sword Collision + Enemy Health
-- **Prompt:** Asked AI for guidance on implementing *Sword Collision + Enemy Health* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Death VFX
-- **Prompt:** Asked AI for guidance on implementing *Death VFX* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Cinemachine
-- **Prompt:** Asked AI for guidance on implementing *Cinemachine* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Rule Tiles
-- **Prompt:** Asked AI for guidance on implementing *Rule Tiles* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Sprite Transparency
-- **Prompt:** Asked AI for guidance on implementing *Sprite Transparency* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Second Scene
-- **Prompt:** Asked AI for guidance on implementing *Second Scene* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Camera Controller
-- **Prompt:** Asked AI for guidance on implementing *Camera Controller* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Portal Effect
-- **Prompt:** Asked AI for guidance on implementing *Portal Effect* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## 2D Lighting
-- **Prompt:** Asked AI for guidance on implementing *2D Lighting* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## UI Setup
-- **Prompt:** Asked AI for guidance on implementing *UI Setup* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## UI Toggle Active
-- **Prompt:** Asked AI for guidance on implementing *UI Toggle Active* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## IWeapon Interface
-- **Prompt:** Asked AI for guidance on implementing *IWeapon Interface* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Scriptable Objects
-- **Prompt:** Asked AI for guidance on implementing *Scriptable Objects* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Instantiating Weapons
-- **Prompt:** Asked AI for guidance on implementing *Instantiating Weapons* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Bow & Staff
-- **Prompt:** Asked AI for guidance on implementing *Bow & Staff* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Weapon Cooldown
-- **Prompt:** Asked AI for guidance on implementing *Weapon Cooldown* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Bow + Arrow
-- **Prompt:** Asked AI for guidance on implementing *Bow + Arrow* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Arrow Projectile
-- **Prompt:** Asked AI for guidance on implementing *Arrow Projectile* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
-
-## Magic Staff
-- **Prompt:** Asked AI for guidance on implementing *Magic Staff* in Unity.
-- **AI Output:** Provided explanation, sample code, or Unity setup instructions.
-- **Decision:** Adopted/modified based on project needs.
-- **Notes:** This feature contributes to making the game closer to a polished 2D Top Down RPG as per tutorial.
+## Additional Notes
+- **Scripts**: All C# scripts are located in `Assets/Scripts/`. Key files include:
+- `PlayerController.cs`: Handles player movement and input.
+- `EnemyBase.cs`: Base class for enemy behavior.
+- `WeaponFactory.cs`: Manages weapon instantiation.
+- **Scenes**: Game scenes are stored in `Assets/Scenes/`. Start with `Sample
